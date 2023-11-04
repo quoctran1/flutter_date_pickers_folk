@@ -27,7 +27,9 @@ class MonthPicker<T extends Object> extends StatefulWidget {
     required this.lastDate,
     this.datePickerLayoutSettings = const DatePickerLayoutSettings(),
     this.datePickerKeys,
+    this.titleHeader,
     required this.datePickerStyles,
+    this.locale,
   })  : assert(!firstDate.isAfter(lastDate)),
         assert(
             selection.isEmpty || !selection.isBefore(firstDate),
@@ -57,6 +59,8 @@ class MonthPicker<T extends Object> extends StatefulWidget {
       DatePickerStyles? datePickerStyles,
       DatePickerKeys? datePickerKeys,
       SelectableDayPredicate? selectableDayPredicate,
+      Locale? locale,
+        String? titleHeader,
       ValueChanged<DateTime>? onMonthChanged}) {
     assert(!firstDate.isAfter(lastDate));
     assert(!lastDate.isBefore(firstDate));
@@ -64,13 +68,16 @@ class MonthPicker<T extends Object> extends StatefulWidget {
     assert(!selectedDate.isAfter(lastDate));
 
     final selection = MonthPickerSingleSelection(selectedDate);
-    final selectionLogic = MonthSelectable(selectedDate, firstDate, lastDate,
+    final selectionLogic = MonthSelectable(
+        selectedDate, firstDate, lastDate,
         selectableDayPredicate: selectableDayPredicate);
 
     return MonthPicker<DateTime>._(
       onChanged: onChanged,
       firstDate: firstDate,
       lastDate: lastDate,
+      locale: locale,
+      titleHeader: titleHeader,
       selectionLogic: selectionLogic,
       selection: selection,
       datePickerKeys: datePickerKeys,
@@ -129,6 +136,8 @@ class MonthPicker<T extends Object> extends StatefulWidget {
 
   /// The latest date the user is permitted to pick.
   final DateTime lastDate;
+  final Locale? locale;
+  final String? titleHeader;
 
   /// Layout settings what can be customized by user
   final DatePickerLayoutSettings datePickerLayoutSettings;
@@ -146,7 +155,8 @@ class MonthPicker<T extends Object> extends StatefulWidget {
   State<StatefulWidget> createState() => _MonthPickerState<T>();
 }
 
-class _MonthPickerState<T extends Object> extends State<MonthPicker<T>> {
+class _MonthPickerState<T extends Object>
+    extends State<MonthPicker<T>> {
   PageController _monthPickerController = PageController();
 
   Locale locale = _defaultLocale;
@@ -164,16 +174,19 @@ class _MonthPickerState<T extends Object> extends State<MonthPicker<T>> {
   StreamSubscription<T>? _changesSubscription;
 
   /// True if the earliest allowable year is displayed.
-  bool get _isDisplayingFirstYear =>
-      !_currentDisplayedYearDate.isAfter(DateTime(widget.firstDate.year));
+  bool get _isDisplayingFirstYear => !_currentDisplayedYearDate
+      .isAfter(DateTime(widget.firstDate.year));
 
   /// True if the latest allowable year is displayed.
-  bool get _isDisplayingLastYear =>
-      !_currentDisplayedYearDate.isBefore(DateTime(widget.lastDate.year));
+  bool get _isDisplayingLastYear => !_currentDisplayedYearDate
+      .isBefore(DateTime(widget.lastDate.year));
 
   @override
   void initState() {
     super.initState();
+    if (widget.locale != null) {
+      locale = widget.locale!;
+    }
     _initWidgetData();
     _updateCurrentDate();
   }
@@ -197,7 +210,8 @@ class _MonthPickerState<T extends Object> extends State<MonthPicker<T>> {
       MaterialLocalizations? curLocalizations =
           Localizations.of<MaterialLocalizations>(
               context, MaterialLocalizations);
-      if (curLocalizations != null && localizations != curLocalizations) {
+      if (curLocalizations != null &&
+          localizations != curLocalizations) {
         localizations = curLocalizations;
       }
 
@@ -212,7 +226,8 @@ class _MonthPickerState<T extends Object> extends State<MonthPicker<T>> {
   @override
   Widget build(BuildContext context) {
     int yearsCount =
-        DatePickerUtils.yearDelta(widget.firstDate, widget.lastDate) + 1;
+        DatePickerUtils.yearDelta(widget.firstDate, widget.lastDate) +
+            1;
 
     return SizedBox(
       width: widget.datePickerLayoutSettings.monthPickerPortraitWidth,
@@ -241,7 +256,9 @@ class _MonthPickerState<T extends Object> extends State<MonthPicker<T>> {
                 tooltip: _isDisplayingFirstYear
                     ? null
                     : '${localizations.formatYear(_previousYearDate)}',
-                onPressed: _isDisplayingFirstYear ? null : _handlePreviousYear,
+                onPressed: _isDisplayingFirstYear
+                    ? null
+                    : _handlePreviousYear,
               ),
             ),
           ),
@@ -256,7 +273,8 @@ class _MonthPickerState<T extends Object> extends State<MonthPicker<T>> {
                 tooltip: _isDisplayingLastYear
                     ? null
                     : '${localizations.formatYear(_nextYearDate)}',
-                onPressed: _isDisplayingLastYear ? null : _handleNextYear,
+                onPressed:
+                    _isDisplayingLastYear ? null : _handleNextYear,
               ),
             ),
           ),
@@ -273,16 +291,17 @@ class _MonthPickerState<T extends Object> extends State<MonthPicker<T>> {
   }
 
   void _initWidgetData() {
-    final initiallyShowDate =
-        widget.selection.isEmpty ? DateTime.now() : widget.selection.earliest;
+    final initiallyShowDate = widget.selection.isEmpty
+        ? DateTime.now()
+        : widget.selection.earliest;
 
     // Initially display the pre-selected date.
-    final int yearPage =
-        DatePickerUtils.yearDelta(widget.firstDate, initiallyShowDate);
+    final int yearPage = DatePickerUtils.yearDelta(
+        widget.firstDate, initiallyShowDate);
 
     _changesSubscription?.cancel();
-    _changesSubscription = widget.selectionLogic.onUpdate
-        .listen((newSelectedDate) => widget.onChanged(newSelectedDate))
+    _changesSubscription = widget.selectionLogic.onUpdate.listen(
+        (newSelectedDate) => widget.onChanged(newSelectedDate))
       ..onError((e) => print(e.toString()));
 
     _monthPickerController.dispose();
@@ -292,8 +311,8 @@ class _MonthPickerState<T extends Object> extends State<MonthPicker<T>> {
 
   void _updateCurrentDate() {
     _todayDate = DateTime.now();
-    final DateTime tomorrow =
-        DateTime(_todayDate.year, _todayDate.month, _todayDate.day + 1);
+    final DateTime tomorrow = DateTime(
+        _todayDate.year, _todayDate.month, _todayDate.day + 1);
     Duration timeUntilTomorrow = tomorrow.difference(_todayDate);
     timeUntilTomorrow +=
         const Duration(seconds: 1); // so we don't miss it by rounding
@@ -308,7 +327,8 @@ class _MonthPickerState<T extends Object> extends State<MonthPicker<T>> {
       DateTime(yearDate.year + yearsToAdd);
 
   Widget _buildItems(BuildContext context, int index) {
-    final DateTime year = _addYearsToYearDate(widget.firstDate, index);
+    final DateTime year =
+        _addYearsToYearDate(widget.firstDate, index);
 
     final ThemeData theme = Theme.of(context);
     DatePickerStyles styles = widget.datePickerStyles;
@@ -325,6 +345,7 @@ class _MonthPickerState<T extends Object> extends State<MonthPicker<T>> {
       selectedPeriodKey: widget.datePickerKeys?.selectedPeriodKeys,
       datePickerStyles: styles,
       locale: locale,
+      titleHeader: widget.titleHeader,
       localizations: localizations,
       selectionLogic: widget.selectionLogic,
     );
@@ -335,7 +356,8 @@ class _MonthPickerState<T extends Object> extends State<MonthPicker<T>> {
       String yearStr = localizations.formatYear(_nextYearDate);
       SemanticsService.announce(yearStr, textDirection);
       _monthPickerController.nextPage(
-          duration: widget.datePickerLayoutSettings.pagesScrollDuration,
+          duration:
+              widget.datePickerLayoutSettings.pagesScrollDuration,
           curve: Curves.ease);
     }
   }
@@ -345,17 +367,20 @@ class _MonthPickerState<T extends Object> extends State<MonthPicker<T>> {
       String yearStr = localizations.formatYear(_previousYearDate);
       SemanticsService.announce(yearStr, textDirection);
       _monthPickerController.previousPage(
-          duration: widget.datePickerLayoutSettings.pagesScrollDuration,
+          duration:
+              widget.datePickerLayoutSettings.pagesScrollDuration,
           curve: Curves.ease);
     }
   }
 
   void _handleYearPageChanged(int yearPage) {
     setState(() {
-      _previousYearDate = _addYearsToYearDate(widget.firstDate, yearPage - 1);
+      _previousYearDate =
+          _addYearsToYearDate(widget.firstDate, yearPage - 1);
       _currentDisplayedYearDate =
           _addYearsToYearDate(widget.firstDate, yearPage);
-      _nextYearDate = _addYearsToYearDate(widget.firstDate, yearPage + 1);
+      _nextYearDate =
+          _addYearsToYearDate(widget.firstDate, yearPage + 1);
     });
   }
 
@@ -364,14 +389,20 @@ class _MonthPickerState<T extends Object> extends State<MonthPicker<T>> {
         twoDigitZeroPaddedFormat:
             intl.NumberFormat('00', _defaultLocale.toString()),
         fullYearFormat: intl.DateFormat.y(_defaultLocale.toString()),
-        longDateFormat: intl.DateFormat.yMMMMEEEEd(_defaultLocale.toString()),
-        shortMonthDayFormat: intl.DateFormat.MMMd(_defaultLocale.toString()),
-        decimalFormat:
-            intl.NumberFormat.decimalPattern(_defaultLocale.toString()),
-        shortDateFormat: intl.DateFormat.yMMMd(_defaultLocale.toString()),
-        mediumDateFormat: intl.DateFormat.MMMEd(_defaultLocale.toString()),
-        compactDateFormat: intl.DateFormat.yMd(_defaultLocale.toString()),
-        yearMonthFormat: intl.DateFormat.yMMMM(_defaultLocale.toString()),
+        longDateFormat:
+            intl.DateFormat.yMMMMEEEEd(_defaultLocale.toString()),
+        shortMonthDayFormat:
+            intl.DateFormat.MMMd(_defaultLocale.toString()),
+        decimalFormat: intl.NumberFormat.decimalPattern(
+            _defaultLocale.toString()),
+        shortDateFormat:
+            intl.DateFormat.yMMMd(_defaultLocale.toString()),
+        mediumDateFormat:
+            intl.DateFormat.MMMEd(_defaultLocale.toString()),
+        compactDateFormat:
+            intl.DateFormat.yMd(_defaultLocale.toString()),
+        yearMonthFormat:
+            intl.DateFormat.yMMMM(_defaultLocale.toString()),
       );
 }
 
@@ -405,6 +436,7 @@ class _MonthPicker<T> extends StatelessWidget {
   final ISelectablePicker<T> selectionLogic;
 
   final Locale locale;
+  final String? titleHeader;
 
   _MonthPicker(
       {required this.displayedYear,
@@ -418,6 +450,7 @@ class _MonthPicker<T> extends StatelessWidget {
       required this.localizations,
       required this.locale,
       this.selectedPeriodKey,
+      this.titleHeader,
       Key? key})
       : assert(!firstDate.isAfter(lastDate)),
         super(key: key);
@@ -467,11 +500,21 @@ class _MonthPicker<T> extends StatelessWidget {
             child: Center(
               child: ExcludeSemantics(
                 child: Text(
-                  localizations.formatYear(displayedYear),
+                  "${titleHeader ?? ""} ${intl.DateFormat.y(locale
+                      .languageCode).format(displayedYear)}",
                   key: selectedPeriodKey,
                   style: datePickerStyles.displayedPeriodTitle,
                 ),
               ),
+            ),
+          ),
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 8),
+            child: Divider(
+              height: 10,
+              color: Color(0xFFB3B3B3),
+              endIndent: 10,
+              indent: 10,
             ),
           ),
           Flexible(
@@ -485,6 +528,9 @@ class _MonthPicker<T> extends StatelessWidget {
       ),
     );
   }
+
+  String capitalize(String text) =>
+      "${text[0].toUpperCase()}${text.substring(1).toLowerCase()}";
 }
 
 class _MonthCell<T> extends StatelessWidget {
@@ -515,7 +561,8 @@ class _MonthCell<T> extends StatelessWidget {
     BoxDecoration? decoration;
     TextStyle? itemStyle;
 
-    if (monthType != DayType.disabled && monthType != DayType.notSelected) {
+    if (monthType != DayType.disabled &&
+        monthType != DayType.notSelected) {
       itemStyle = datePickerStyles.selectedDateStyle;
       decoration = datePickerStyles.selectedSingleDateDecoration;
     } else if (monthType == DayType.disabled) {
@@ -530,8 +577,8 @@ class _MonthCell<T> extends StatelessWidget {
         '${localizations.formatDecimal(monthToBuild.month)}, '
         '${localizations.formatFullDate(monthToBuild)}';
 
-    bool isSelectedMonth =
-        monthType != DayType.disabled && monthType != DayType.notSelected;
+    bool isSelectedMonth = monthType != DayType.disabled &&
+        monthType != DayType.notSelected;
 
     String monthStr = _getMonthStr(monthToBuild);
 
@@ -561,7 +608,8 @@ class _MonthCell<T> extends StatelessWidget {
   // We can'r use [localizations] here because MaterialLocalizations doesn't
   // provide short month string.
   String _getMonthStr(DateTime date) {
-    String month = intl.DateFormat.MMM(locale.toString()).format(date);
+    String month =
+        intl.DateFormat.MMM(locale.toString()).format(date);
     return month;
   }
 }
